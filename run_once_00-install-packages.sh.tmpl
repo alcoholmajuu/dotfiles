@@ -33,9 +33,14 @@ brew install macism
 # ===== Linux: Linuxbrew ($HOME/.Linuxbrew) =====
 BREW_PREFIX="$HOME/.linuxbrew"
 
-# git は Linuxbrew 用に必須ツール)
-if ! command -v git &>/dev/null; then
-  sudo apt-get update && sudo apt-get install -y git curl build-essential
+# Linuxbrew needs these when bottles are unavailable and formulas fall back to source builds.
+if ! command -v git &>/dev/null || ! command -v curl &>/dev/null || ! command -v make &>/dev/null || ! command -v gcc &>/dev/null || ! command -v clang &>/dev/null; then
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update
+    sudo apt-get install -y git curl build-essential clang
+  else
+    echo "WARN: Install git, curl, make, gcc, and clang manually for Linuxbrew."
+  fi
 fi
 
 # im-select.nvim uses fcitx5-remote, ibus, or fcitx-remote on Linux.
