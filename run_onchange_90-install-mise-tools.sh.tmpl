@@ -1,0 +1,28 @@
+#!/bin/bash
+# Re-run when ~/.tool-versions changes.
+# {{ include "dot_tool-versions" | sha256sum }}
+set -euo pipefail
+
+if ! command -v mise &>/dev/null; then
+  echo "mise is not installed yet; skipping mise-managed tool install."
+  exit 0
+fi
+
+set_github_token_from_gh() {
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    return
+  fi
+
+  local token=""
+  if command -v gh &>/dev/null; then
+    token="$(gh auth token 2>/dev/null || true)"
+  fi
+
+  if [ -n "$token" ]; then
+    export GITHUB_TOKEN="$token"
+  fi
+}
+
+set_github_token_from_gh
+
+mise install -y -C "$HOME"

@@ -1,0 +1,93 @@
+#!/bin/bash
+set -euo pipefail
+
+BREW_PACKAGES=(
+  chezmoi
+  mise
+  gh
+  thefuck
+  ncdu
+  duf
+  zsh-autosuggestions
+  zsh-fast-syntax-highlighting
+)
+
+{{ if eq .chezmoi.os "darwin" -}}
+# ===== macOS: Homebrew =====
+if ! command -v brew &>/dev/null; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+brew install "${BREW_PACKAGES[@]}"
+brew tap laishulu/homebrew
+brew install macism
+{{ end -}}
+
+{{ if eq .chezmoi.os "linux" -}}
+# ===== Linux: Linuxbrew ($HOME/.Linuxbrew) =====
+BREW_PREFIX="$HOME/.linuxbrew"
+
+# git は Linuxbrew 用に必須ツール)
+if ! command -v git &>/dev/null; then
+  sudo apt-get update && sudo apt-get install -y git curl build-essential
+fi
+
+# im-select.nvim uses fcitx5-remote, ibus, or fcitx-remote on Linux.
+if ! command -v fcitx5-remote &>/dev/null && ! command -v ibus &>/dev/null && ! command -v fcitx-remote &>/dev/null; then
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update
+    sudo apt-get install -y fcitx5 fcitx5-mozc
+  else
+    echo "WARN: Install fcitx5, ibus, or fcitx manually for im-select.nvim."
+  fi
+fi
+
+# Linuxbrew のインストール
+if [[ ! -x "$BREW_PREFIX/bin/brew" ]]; then
+  echo "==> Linuxbrew at $BREW_PREFIX (installing)..."
+  git clone https://github.com/Homebrew/brew "$BREW_PREFIX/Homebrew"
+  mkdir -p "$BREW_PREFIX/bin"
+  ln -sf "$BREW_PREFIX/Homebrew/bin/brew" "$BREW_PREFIX/bin/brew"
+fi
+
+eval "$("$BREW_PREFIX/bin/brew" shellenv)"
+brew update --quiet
+
+brew install "${BREW_PACKAGES[@]}"
+{{ end -}}
+
+set_github_token_from_gh() {
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    return
+  fi
+
+  local token=""
+  if command -v gh &>/dev/null; then
+    token="$(gh auth token 2>/dev/null || true)"
+  fi
+
+  if [ -n "$token" ]; then
+    export GITHUB_TOKEN="$token"
+  fi
+}
+
+set_github_token_from_gh
+
+# ===== mise-managed tools =====
+if command -v mise &>/dev/null; then
+  mise install -y -C "$HOME"
+fi
+
+# ===== ghq =====
+mkdir -p "$HOME/ghq"
+
+# fzf-git.sh
+if [ ! -d "$HOME/fzf-git.sh" ]; then
+  git clone https://github.com/junegunn/fzf-git.sh.git "$HOME/fzf-git.sh"
+fi

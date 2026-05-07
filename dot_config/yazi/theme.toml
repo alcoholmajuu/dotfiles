@@ -1,0 +1,6 @@
+[flavor]
+use = "catppuccin-mocha"
+
+[mode]
+normal_main = { fg = "#1e1e2a", bg = "#89b4fa", bold = true }
+normal_alt = { fg = "#cdd6f4", bg = "#45475a" }

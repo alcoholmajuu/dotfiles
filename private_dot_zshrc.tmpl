@@ -1,0 +1,259 @@
+# ===== Path =====
+export PATH="$HOME/bin:$PATH"
+
+# Go
+export GOPATH="$HOME/go"
+export GOBIN="$GOPATH/bin"
+export PATH="$GOBIN:$PATH"
+
+# ===== Completions (compinit & file fpath 設定) =====
+fpath=(
+  "$HOME/.zsh/completions"
+  "$HOME/.docker/completions"
+  $fpath
+)
+autoload -Uz compinit && compinit
+
+# ===== History =====
+HISTFILE=~/.zsh_history
+HISTSIZE=1000000
+SAVEHIST=1000000
+setopt share_history hist_ignore_dups hist_ignore_all_dups hist_ignore_space hist_reduce_blanks
+
+# ===== Environment =====
+export XDG_CONFIG_HOME="$HOME/.config"
+{{ if eq .chezmoi.os "darwin" -}}
+export HOMEBREW_CASK_OPTS="--appdir=~/Applications"
+{{ end -}}
+
+# ===== Shell 設定 =====
+[[ -f "$HOME/.local/bin/env" ]] && source "$HOME/.local/bin/env"
+{{ if eq .chezmoi.os "linux" -}}
+eval "$($HOME/.Linuxbrew/bin/brew shellenv)"
+{{ end -}}
+
+if [[ -z ${__DOTFILES_MISE_ACTIVATED:-} ]]; then
+  eval "$(mise activate zsh)"
+  export __DOTFILES_MISE_ACTIVATED=1
+fi
+if [[ -z ${__DOTFILES_DIRENV_HOOKED:-} ]]; then
+  eval "$(direnv hook zsh)"
+  export __DOTFILES_DIRENV_HOOKED=1
+fi
+if [[ -z ${__DOTFILES_STARSHIP_INITIALIZED:-} ]]; then
+  eval "$(starship init zsh)"
+  export __DOTFILES_STARSHIP_INITIALIZED=1
+fi
+if [[ -t 0 && -z ${__DOTFILES_FZF_ZSH_INITIALIZED:-} ]]; then
+  eval "$(fzf --zsh)"
+  export __DOTFILES_FZF_ZSH_INITIALIZED=1
+fi
+if [[ $- == *i* && -z ${__DOTFILES_ZOXIDE_INITIALIZED:-} ]]; then
+  eval "$(zoxide init zsh --cmd cd)"
+  export __DOTFILES_ZOXIDE_INITIALIZED=1
+fi
+eval $(thefuck --alias)
+eval $(thefuck --alias fk)
+
+source ~/fzf-git.sh/fzf-git.sh
+if command -v gwq &>/dev/null; then
+  source <(gwq completion zsh)
+fi
+
+# ===== FZF 設定 =====
+fg="#cdd6f4"
+bg="#1e1e2e"
+bg_highlight="#313244"
+purple="#cba6f7"
+blue="#89b4fa"
+cyan="#94e2d5"
+
+export FZF_DEFAULT_OPTS="--color=fg:${fg},bg:${bg},hl:${purple},fg+:${fg},bg+:${bg_highlight},hl+:${purple},info:${blue},prompt:${cyan},pointer:${cyan},marker:${cyan},spinner:${cyan},header:${cyan}"
+export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+
+show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
+
+export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
+
+_fzf_compgen_path() {
+  fd --hidden --exclude .git . "$1"
+}
+
+_fzf_compgen_dir() {
+  fd --type=d --hidden --exclude .git . "$1"
+}
+
+_fzf_comprun() {
+  local command="$1"
+  shift
+  case "$command" in
+      cd)           fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
+      export|unset) fzf --preview "eval 'echo \${}'"                 "$@" ;;
+      ssh)          fzf --preview 'dig {}'                           "$@" ;;
+      *)            fzf -- "$show_file_or_dir_preview"               "$@" ;;
+  esac
+}
+
+# ===== 関数 =====
+export EDITOR="nvim"
+
+function _fzf_git_dev() {
+  local preview='repo={}; readme=$({ find "$repo" -maxdepth 1 -type f -iname "README*" 2>/dev/null; find "$repo/.github" -maxdepth 1 -type f -iname "README*" 2>/dev/null; } | head -n 1); if [ -n "$readme" ]; then if command -v bat >/dev/null; then bat --color=always --Style=header,grid --line-range :200 "$readme"; else sed -n "1,200p" "$readme"; fi; else eza --tree --color=always "$repo" | head -200; fi'
+
+  if typeset -f _fzf_git_fzf >/dev/null; then
+    ghq list --full-path | rg -v '=[^/]+$' |
+      _fzf_git_fzf --border-label '📦 Repositories ' \
+        --header 'CTRL-O (open in browser)' \
+        --bind "ctrl-o:execute-silent:zsh -lic '_fzf_git_open_dev \"\$1\"' zsh {}" \
+        --preview "$preview"
+  else
+    ghq list --full-path | rg -v '=[^/]+$' | fzf --preview "$preview"
+  fi
+}
+
+function _fzf_git_gwq_list() {
+  gwq list "$@" --json |
+    python3 -c 'import json, os, sys
+home = os.path.expanduser("~")
+for worktree in json.load(sys.stdin):
+  path = worktree.get("path", "")
+  display_path = "~" + path[len(home):] if path == home or path.startswith(home + "/") else path
+  marker = "●" if worktree.get("is_main") else " "
+  print("{} {} ({})\t{}".format(marker, worktree.get("branch", ""), display_path, path))'
+}
+
+function _fzf_git_gwq() {
+  local preview='repo={2}; readme=$({ find "$repo" -maxdepth 1 -type f -iname "README*" 2>/dev/null; find "$repo/.github" -maxdepth 1 -type f -iname "README*" 2>/dev/null; } | head -n 1); if [ -n "$readme" ]; then if command -v bat >/dev/null; then bat --color=always --Style=header,grid --line-range :200 "$readme"; else sed -n "1,200p" "$readme"; fi; else eza --tree --color=always "$repo" | head -200; fi'
+  local global_list='gwq list -g --json | python3 -c '"'"'import json, os, sys;
+home = os.path.expanduser("~");
+for worktree in json.load(sys.stdin):
+  path = worktree.get("path", "");
+  display_path = "~" + path[len(home):] if path == home or path.startswith(home + "/") else path;
+  marker = "●" if worktree.get("is_main") else " ";
+  print("{} {} ({})\t{}".format(marker, worktree.get("branch", ""), display_path, path))'"'"
+
+  if typeset -f _fzf_git_fzf >/dev/null; then
+    _fzf_git_gwq_list |
+      _fzf_git_fzf --ansi --multi --delimiter '\t' --with-nth 1 \
+        --border-label '🌿 GWQ Worktrees ' \
+        --header 'CTRL-O (open in browser) / CTRL-X (remove worktree) / ALT-A (all worktrees)' \
+        --bind "ctrl-o:execute-silent:zsh -lic '_fzf_git_open_dev \"\$1\"' zsh {2}" \
+        --bind "ctrl-x:reload(zsh -lic 'for repo_path in \"\$@\"; do gwq remove -g \"\$repo_path\" >/dev/null || true; done; _fzf_git_gwq_list' zsh {+2})" \
+        --bind "alt-a:change-border-label(🌿 All GWQ Worktrees)+reload:$global_list" \
+        --preview "$preview" |
+      cut -f2
+  else
+    _fzf_git_gwq_list |
+      fzf --multi --delimiter '\t' --with-nth 1 \
+        --header 'CTRL-O (open in browser) / CTRL-X (remove worktree)' \
+        --bind "ctrl-x:reload(zsh -lic 'for repo_path in \"\$@\"; do gwq remove -g \"\$repo_path\" >/dev/null || true; done; _fzf_git_gwq_list' zsh {+2})" \
+        --preview "$preview" |
+      cut -f2
+  fi
+}
+
+function _fzf_git_open_dev() {
+  local repo_path="$1" remote url
+
+  remote="$(git -C "$repo_path" remote get-url origin 2>/dev/null)" || return
+  url="${remote%.git}"
+
+  case "$url" in
+    git@*:*)
+      url="${url#git@}"
+      url="${url/:/\/}"
+      url="https://$url"
+      ;;
+    ssh://git@*)
+      url="https://${url#ssh://git@}"
+      ;;
+    http://*|https://*) ;;
+    *) return 1 ;;
+  esac
+
+  case "$OSTYPE" in
+    darwin*) open "$url" ;;
+    linux*)  xdg-open "$url" ;;
+    msys*)   start "$url" ;;
+  esac
+}
+
+function fzf-git-dev-widget() {
+  local moveto repo_name
+
+  moveto="$(_fzf_git_dev)" || return
+  [[ -n "$moveto" ]] || return 1
+
+  builtin cd -- "$moveto" || return
+  zle reset-prompt
+
+  if [[ -n "${TMUX:-}" ]]; then
+    repo_name="${moveto##*/}"
+    tmux rename-session "${repo_name//./-}"
+  fi
+}
+zle -N fzf-git-dev-widget
+for keymap in emacs vicmd viins; do
+  bindkey -M "$keymap" '^g^d' fzf-git-dev-widget
+  bindkey -M "$keymap" '^gd' fzf-git-dev-widget
+done
+
+function fzf-git-gwq-widget() {
+  local moveto repo_name
+
+  moveto="$(_fzf_git_gwq)" || return
+  [[ -n "$moveto" ]] || return 1
+
+  builtin cd -- "$moveto" || return
+  zle reset-prompt
+
+  if [[ -n "${TMUX:-}" ]]; then
+    repo_name="${moveto##*/}"
+    tmux rename-session "${repo_name//./-}"
+  fi
+}
+zle -N fzf-git-gwq-widget
+for keymap in emacs vicmd viins; do
+  bindkey -M "$keymap" '^g^q' fzf-git-gwq-widget
+  bindkey -M "$keymap" '^gq' fzf-git-gwq-widget
+done
+
+function y() {
+  local tmp="$(mktemp -t yazi-cwd.XXXXXX)" cwd
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    builtin cd -- "$cwd"
+  fi
+  rm -f -- "$tmp"
+}
+
+codex() {
+  command codex --dangerously-bypass-approvals-and-sandbox "$@"
+}
+
+# ===== Alias =====
+alias ls="eza --icons=always"
+alias vi='nvim'
+alias vim='nvim'
+alias python="python3"
+alias grep='rg'
+alias gdf='git diff --name-only | fzf --preview "git diff --color=always {}" --preview-window=right:60% | xargs -r nvim'
+
+# ===== キーバインド =====
+bindkey '^[[A' history-beginning-search-backward
+bindkey '^[[B' history-beginning-search-forward
+
+# ===== Work 用 (~/.zshrc.work を参照) =====
+[[ -f ~/.zshrc.work ]] && source ~/.zshrc.work
+
+# ===== zsh プラグイン (syntax-highlighting など) =====
+if [[ -z ${__DOTFILES_ZSH_AUTOSUGGESTIONS_LOADED:-} ]]; then
+  source "${HOMEBREW_PREFIX}/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  export __DOTFILES_ZSH_AUTOSUGGESTIONS_LOADED=1
+fi
+if [[ -z ${FAST_HIGHLIGHT_VERSION:-} ]]; then
+  source "${HOMEBREW_PREFIX}/opt/zsh-fast-syntax-highlighting/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
+fi
