@@ -6,6 +6,11 @@ WORK_SOURCE := $(HOME)/dotfiles-work
 LINUX_BREW := $(HOME)/.linuxbrew
 PERSONAL_SOURCE := $(CURDIR)
 SOURCE_DIR := $(shell chezmoi source-path 2>/dev/null || echo "$(HOME)/dotfiles")
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Linux)
+export PATH := $(LINUX_BREW)/bin:$(PATH)
+endif
 
 help: ## Show this help
 	@rg '^[a-zA-Z_-]+: .*?## .*$$' $(MAKEFILE_LIST) \
