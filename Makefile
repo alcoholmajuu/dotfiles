@@ -1,6 +1,7 @@
 .PHONY: help apply apply-work diff diff-work status update update-work init bootstrap bootstrap-work edit edit-work add doctor
 
 CHEZMOI := chezmoi
+BREW := brew
 WORK_REPO ?=
 WORK_SOURCE := $(HOME)/dotfiles-work
 LINUX_BREW := $(HOME)/.linuxbrew
@@ -10,6 +11,8 @@ UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Linux)
 export PATH := $(LINUX_BREW)/bin:$(PATH)
+CHEZMOI := $(LINUX_BREW)/bin/chezmoi
+BREW := $(LINUX_BREW)/bin/brew
 endif
 
 help: ## Show this help
@@ -117,4 +120,4 @@ _ensure-brew:
 	'
 
 _ensure-chezmoi:
-	@command -v chezmoi &>/dev/null || brew install chezmoi
+	@[ -x "$(CHEZMOI)" ] || $(BREW) install chezmoi
