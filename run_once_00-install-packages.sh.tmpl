@@ -30,8 +30,8 @@ brew install macism
 {{ end -}}
 
 {{ if eq .chezmoi.os "linux" -}}
-# ===== Linux: Linuxbrew ($HOME/.Linuxbrew) =====
-BREW_PREFIX="$HOME/.linuxbrew"
+# ===== Linux: Linuxbrew =====
+BREW_PREFIX="/home/linuxbrew/.linuxbrew"
 
 # Linuxbrew needs these when bottles are unavailable and formulas fall back to source builds.
 if ! command -v git &>/dev/null || ! command -v curl &>/dev/null || ! command -v make &>/dev/null || ! command -v gcc &>/dev/null || ! command -v clang &>/dev/null; then
@@ -56,9 +56,7 @@ fi
 # Linuxbrew のインストール
 if [[ ! -x "$BREW_PREFIX/bin/brew" ]]; then
   echo "==> Linuxbrew at $BREW_PREFIX (installing)..."
-  git clone https://github.com/Homebrew/brew "$BREW_PREFIX/Homebrew"
-  mkdir -p "$BREW_PREFIX/bin"
-  ln -sf "$BREW_PREFIX/Homebrew/bin/brew" "$BREW_PREFIX/bin/brew"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
 eval "$("$BREW_PREFIX/bin/brew" shellenv)"

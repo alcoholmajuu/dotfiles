@@ -4,7 +4,7 @@ CHEZMOI := chezmoi
 BREW := brew
 WORK_REPO ?=
 WORK_SOURCE := $(HOME)/dotfiles-work
-LINUX_BREW := $(HOME)/.linuxbrew
+LINUX_BREW := /home/linuxbrew/.linuxbrew
 PERSONAL_SOURCE := $(CURDIR)
 SOURCE_DIR := $(shell chezmoi source-path 2>/dev/null || echo "$(HOME)/dotfiles")
 UNAME_S := $(shell uname -s)
@@ -108,9 +108,7 @@ _ensure-brew:
 			fi; \
 			BREW_PREFIX="$(LINUX_BREW)"; \
 			if [ ! -x "$$BREW_PREFIX/bin/brew" ]; then \
-				git clone https://github.com/Homebrew/brew "$$BREW_PREFIX/Homebrew"; \
-				mkdir -p "$$BREW_PREFIX/bin"; \
-				ln -sf "$$BREW_PREFIX/Homebrew/bin/brew" "$$BREW_PREFIX/bin/brew"; \
+				/bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
 			fi; \
 			eval "$$($$BREW_PREFIX/bin/brew shellenv)"; \
 			brew update --quiet; \

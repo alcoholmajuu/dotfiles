@@ -29,7 +29,7 @@ export HOMEBREW_CASK_OPTS="--appdir=~/Applications"
 # ===== Shell 設定 =====
 [[ -f "$HOME/.local/bin/env" ]] && source "$HOME/.local/bin/env"
 {{ if eq .chezmoi.os "linux" -}}
-eval "$($HOME/.linuxbrew/bin/brew shellenv)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 {{ end -}}
 
 if [[ -z ${__DOTFILES_MISE_ACTIVATED:-} ]]; then
