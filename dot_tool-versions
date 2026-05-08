@@ -12,6 +12,7 @@ zoxide 0.9.9
 starship 1.25.0
 direnv 2.37.1
 neovim 0.12.2
+nodejs lts
 git-lfs 3.7.1
 delta 0.19.2
 lazygit 0.61.1
