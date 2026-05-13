@@ -115,7 +115,13 @@ function _fzf_git_dev() {
 }
 
 function _fzf_git_gwq_list() {
-  gwq list "$@" --json |
+  local gwq_args=("$@")
+
+  if (( ${#gwq_args[@]} == 0 )) && ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    gwq_args=(-g)
+  fi
+
+  gwq list "${gwq_args[@]}" --json |
     python3 -c 'import json, os, sys
 home = os.path.expanduser("~")
 for worktree in json.load(sys.stdin):
@@ -200,6 +206,22 @@ for keymap in emacs vicmd viins; do
   bindkey -M "$keymap" '^g^d' fzf-git-dev-widget
   bindkey -M "$keymap" '^gd' fzf-git-dev-widget
 done
+
+function fzf-git-worktrees-widget() {
+  local moveto repo_name
+
+  moveto="$(_fzf_git_worktrees --no-multi)" || return
+  [[ -n "$moveto" ]] || return 1
+
+  builtin cd -- "$moveto" || return
+  zle reset-prompt
+
+  if [[ -n "${TMUX:-}" ]]; then
+    repo_name="${moveto##*/}"
+    tmux rename-session "${repo_name//./-}"
+  fi
+}
+zle -N fzf-git-worktrees-widget
 
 function fzf-git-gwq-widget() {
   local moveto repo_name
