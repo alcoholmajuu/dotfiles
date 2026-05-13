@@ -123,8 +123,13 @@ function _fzf_git_gwq_list() {
 
   gwq list "${gwq_args[@]}" --json |
     python3 -c 'import json, os, sys
+data = sys.stdin.read()
+try:
+  worktrees = json.loads(data)
+except json.JSONDecodeError:
+  sys.exit(0)
 home = os.path.expanduser("~")
-for worktree in json.load(sys.stdin):
+for worktree in worktrees:
   path = worktree.get("path", "")
   display_path = "~" + path[len(home):] if path == home or path.startswith(home + "/") else path
   marker = "●" if worktree.get("is_main") else " "
@@ -134,8 +139,13 @@ for worktree in json.load(sys.stdin):
 function _fzf_git_gwq() {
   local preview='repo={2}; readme=$({ find "$repo" -maxdepth 1 -type f -iname "README*" 2>/dev/null; find "$repo/.github" -maxdepth 1 -type f -iname "README*" 2>/dev/null; } | head -n 1); if [ -n "$readme" ]; then if command -v bat >/dev/null; then bat --color=always --Style=header,grid --line-range :200 "$readme"; else sed -n "1,200p" "$readme"; fi; else eza --tree --color=always "$repo" | head -200; fi'
   local global_list='gwq list -g --json | python3 -c '"'"'import json, os, sys;
+data = sys.stdin.read();
+try:
+  worktrees = json.loads(data)
+except json.JSONDecodeError:
+  sys.exit(0)
 home = os.path.expanduser("~");
-for worktree in json.load(sys.stdin):
+for worktree in worktrees:
   path = worktree.get("path", "");
   display_path = "~" + path[len(home):] if path == home or path.startswith(home + "/") else path;
   marker = "●" if worktree.get("is_main") else " ";
