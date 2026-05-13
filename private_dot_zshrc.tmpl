@@ -104,13 +104,13 @@ function _fzf_git_dev() {
   local preview='repo={}; readme=$({ find "$repo" -maxdepth 1 -type f -iname "README*" 2>/dev/null; find "$repo/.github" -maxdepth 1 -type f -iname "README*" 2>/dev/null; } | head -n 1); if [ -n "$readme" ]; then if command -v bat >/dev/null; then bat --color=always --Style=header,grid --line-range :200 "$readme"; else sed -n "1,200p" "$readme"; fi; else eza --tree --color=always "$repo" | head -200; fi'
 
   if typeset -f _fzf_git_fzf >/dev/null; then
-    ghq list --full-path | rg -v '=[^/]+$' |
+    ghq list --full-path |
       _fzf_git_fzf --border-label '📦 Repositories ' \
         --header 'CTRL-O (open in browser)' \
-        --bind "ctrl-o:execute-silent:zsh -lic '_fzf_git_open_dev \"\$1\"' zsh {}" \
+        --bind "ctrl-o:execute-silent:zsh -lc 'source ~/.zshrc >/dev/null 2>&1; _fzf_git_open_dev \"\$1\"' zsh {}" \
         --preview "$preview"
   else
-    ghq list --full-path | rg -v '=[^/]+$' | fzf --preview "$preview"
+    ghq list --full-path | fzf --preview "$preview"
   fi
 }
 
@@ -155,17 +155,19 @@ for worktree in worktrees:
     _fzf_git_gwq_list |
       _fzf_git_fzf --ansi --multi --delimiter '\t' --with-nth 1 \
         --border-label '🌿 GWQ Worktrees ' \
-        --header 'CTRL-O (open in browser) / CTRL-X (remove worktree) / ALT-A (all worktrees)' \
-        --bind "ctrl-o:execute-silent:zsh -lic '_fzf_git_open_dev \"\$1\"' zsh {2}" \
-        --bind "ctrl-x:reload(zsh -lic 'for repo_path in \"\$@\"; do gwq remove -g \"\$repo_path\" >/dev/null || true; done; _fzf_git_gwq_list' zsh {+2})" \
+        --header 'CTRL-O (open in browser) / CTRL-X (remove worktree) / ALT-X (force remove) / ALT-A (all worktrees)' \
+        --bind "ctrl-o:execute-silent:zsh -lc 'source ~/.zshrc >/dev/null 2>&1; _fzf_git_open_dev \"\$1\"' zsh {2}" \
+        --bind "ctrl-x:reload(zsh -lc 'source ~/.zshrc >/dev/null 2>&1; for repo_path in \"\$@\"; do gwq remove -g \"\$repo_path\" >/dev/null 2>&1 || true; done; _fzf_git_gwq_list' zsh {+2})" \
+        --bind "alt-x:reload(zsh -lc 'source ~/.zshrc >/dev/null 2>&1; for repo_path in \"\$@\"; do gwq remove -g -f \"\$repo_path\" >/dev/null 2>&1 || true; done; _fzf_git_gwq_list' zsh {+2})" \
         --bind "alt-a:change-border-label(🌿 All GWQ Worktrees)+reload:$global_list" \
         --preview "$preview" |
       cut -f2
   else
     _fzf_git_gwq_list |
       fzf --multi --delimiter '\t' --with-nth 1 \
-        --header 'CTRL-O (open in browser) / CTRL-X (remove worktree)' \
-        --bind "ctrl-x:reload(zsh -lic 'for repo_path in \"\$@\"; do gwq remove -g \"\$repo_path\" >/dev/null || true; done; _fzf_git_gwq_list' zsh {+2})" \
+        --header 'CTRL-O (open in browser) / CTRL-X (remove worktree) / ALT-X (force remove)' \
+        --bind "ctrl-x:reload(zsh -lc 'source ~/.zshrc >/dev/null 2>&1; for repo_path in \"\$@\"; do gwq remove -g \"\$repo_path\" >/dev/null 2>&1 || true; done; _fzf_git_gwq_list' zsh {+2})" \
+        --bind "alt-x:reload(zsh -lc 'source ~/.zshrc >/dev/null 2>&1; for repo_path in \"\$@\"; do gwq remove -g -f \"\$repo_path\" >/dev/null 2>&1 || true; done; _fzf_git_gwq_list' zsh {+2})" \
         --preview "$preview" |
       cut -f2
   fi
